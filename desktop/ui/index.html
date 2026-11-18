@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+    <title>PagePilot 桌面版</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <!-- 左侧工具台固定 404px，与 main.js 中 PANEL_WIDTH 保持一致 -->
+    <div class="app">
+      <aside class="panel">
+        <header class="brand">
+          <div class="logo">P</div>
+          <div class="brand-text">
+            <div class="brand-title">PagePilot <span class="tag">桌面版</span></div>
+            <div class="brand-sub">网页自动操作 · AI 答题</div>
+          </div>
+          <button id="settingsToggle" class="icon-btn" title="设置">⚙</button>
+        </header>
+
+        <div class="statusbar">
+          <span id="serverDot" class="dot" title="后端服务"></span>
+          <span id="serverText">初始化中…</span>
+          <span class="grow"></span>
+          <span id="modelText" class="model-pill">模型 -</span>
+        </div>
+
+        <nav class="tabs">
+          <button class="tab active" data-pane="quiz">答题模式</button>
+          <button class="tab" data-pane="console">控制台</button>
+        </nav>
+
+        <div class="pane" id="pane-quiz">
+          <div class="section">
+            <button id="readBtn" class="outline block">
+              <span class="btn-step">1</span> 读取页面题目
+            </button>
+            <div class="stats" id="quizStats">尚未读取页面</div>
+            <textarea id="quizExtra" rows="2" placeholder="补充要求（可选）：只做单选题、优先教材原文…"></textarea>
+            <button id="quizBtn" class="primary block" disabled>
+              <span class="btn-step">2</span><span class="btn-label">AI 生成答案</span>
+            </button>
+          </div>
+          <div class="list-head" id="answerHead" hidden>
+            <span>答案</span>
+            <span class="list-count" id="answerCount"></span>
+          </div>
+          <div id="answers" class="answers"></div>
+          <div class="actions">
+            <button id="applyAnswers" class="primary block" disabled>应用选中答案（不提交）</button>
+          </div>
+        </div>
+
+        <div class="pane console" id="pane-console" hidden>
+          <div class="console-scroll">
+            <section class="card">
+              <div class="card-title">AI 接口</div>
+              <label class="field">
+                <span>服务商</span>
+                <select id="cfgProvider">
+                  <option value="">自定义 / 手动填写</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Base URL</span>
+                <input id="cfgBase" spellcheck="false" placeholder="https://api.deepseek.com/v1" />
+              </label>
+              <label class="field">
+                <span>API Key</span>
+                <div class="input-action">
+                  <input id="cfgKey" type="password" spellcheck="false" placeholder="未配置" />
+                  <button id="cfgKeyToggle" class="mini" type="button">显示</button>
+                </div>
+              </label>
+              <div class="grid-2">
+                <label class="field">
+                  <span>模型 <span id="modelCount" class="muted small"></span></span>
+                  <input id="cfgModel" list="modelList" spellcheck="false" placeholder="输入或选择模型…" autocomplete="off" />
+                  <datalist id="modelList"></datalist>
+                </label>
+                <label class="field">
+                  <span>温度</span>
+                  <input id="cfgTemp" type="number" min="0" max="2" step="0.1" />
+                </label>
+              </div>
+              <div class="row">
+                <button id="cfgSave" class="primary">保存</button>
+                <button id="testAi" class="ghost">测试连接</button>
+                <button id="cfgClear" class="ghost">清除 Key</button>
+              </div>
+              <div class="import-block">
+                <div class="row">
+                  <button id="cfgImportFile" class="ghost">导入配置文件</button>
+                  <button id="cfgImportCode" class="ghost">解析代码并填入</button>
+                </div>
+                <textarea id="cfgImportText" rows="4" spellcheck="false" placeholder="粘贴配置代码后点“解析代码并填入”：&#10;base_url = &quot;http://127.0.0.1:57894/v1&quot;&#10;apiKey = &quot;sk-...&quot;&#10;也支持 Codex / opencode / 环境变量 / curl 片段"></textarea>
+                <input id="cfgImportFileInput" type="file" accept=".txt,.toml,.json,.env,.conf,.ini,.yaml,.yml,.js,.ts,.md,.cfg" hidden />
+              </div>
+              <div class="hint" id="cfgHint"></div>
+            </section>
+
+            <section class="card">
+              <div class="card-title">答题参数</div>
+              <div class="grid-2">
+                <label class="field">
+                  <span>每批题数</span>
+                  <input id="optBatch" type="number" min="3" max="20" step="1" />
+                </label>
+                <label class="field">
+                  <span>并发批数</span>
+                  <input id="optConcurrency" type="number" min="1" max="4" step="1" />
+                </label>
+              </div>
+              <div class="grid-2">
+                <label class="field">
+                  <span>复核阈值（0 = 关闭）</span>
+                  <input id="optReview" type="number" min="0" max="1" step="0.05" />
+                </label>
+                <label class="field">
+                  <span>生成完成后</span>
+                  <select id="optAutoApply">
+                    <option value="0">仅生成答案</option>
+                    <option value="1">自动应用答案</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                <span>应用之后</span>
+                <select id="optAutoSave">
+                  <option value="0">不暂存</option>
+                  <option value="1">自动点击暂存（不提交）</option>
+                </select>
+              </label>
+              <div class="row">
+                <button id="optSave" class="primary">保存参数</button>
+                <button id="optReset" class="ghost">恢复默认</button>
+              </div>
+              <div class="hint" id="optHint"></div>
+            </section>
+
+            <section class="card">
+              <div class="card-title">页面概览</div>
+              <div class="hint" id="overviewText" style="white-space: pre-line">尚未读取页面</div>
+              <div class="row">
+                <button id="overviewRefresh" class="ghost">刷新概览</button>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-title">答案与日志</div>
+              <div class="row">
+                <button id="exportAnswers" class="ghost">导出答案</button>
+                <button id="importAnswers" class="ghost">导入答案</button>
+                <button id="clearAnswers" class="ghost">清空答案</button>
+              </div>
+              <input id="importFile" type="file" accept=".json,application/json" hidden />
+              <div class="row">
+                <button id="copyLogs" class="ghost">复制日志</button>
+                <button id="logsClear" class="ghost">清空日志</button>
+              </div>
+              <div class="hint" id="toolsHint"></div>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <span class="card-title">运行记录</span>
+                <button id="runsRefresh" class="mini">刷新</button>
+              </div>
+              <div class="runs" id="runsList"></div>
+            </section>
+          </div>
+        </div>
+
+        <section class="run" id="runPanel">
+          <header class="run-head" id="runHead">
+            <span class="run-dot"></span>
+            <span class="run-title">运行过程</span>
+            <span id="runProgress" class="progress">待运行</span>
+            <button id="autoScroll" class="icon-btn" title="暂停自动滚动" style="width:26px;height:26px;font-size:11px">⏩</button>
+            <button id="runCollapse" class="icon-btn" title="折叠/展开" style="width:26px;height:26px;font-size:11px">▼</button>
+            <button id="stopBtn" class="icon-btn stop" title="停止执行" disabled>■</button>
+          </header>
+          <ol id="logs" class="logs">
+            <li class="log muted">
+              <span class="log-icon">·</span>
+              <span class="log-text">读取页面后，AI 生成的每一步操作都会显示在这里</span>
+            </li>
+          </ol>
+        </section>
+      </aside>
+
+      <!-- 右侧：顶部地址栏 + 真实网页（WebContentsView 覆盖在 .stage 区域） -->
+      <main class="stage">
+        <div class="topbar">
+          <div class="navbtns">
+            <button id="backBtn" class="round" title="后退">←</button>
+            <button id="fwdBtn" class="round" title="前进">→</button>
+            <button id="reloadBtn" class="round" title="刷新">⟳</button>
+          </div>
+          <div class="url-wrap">
+            <span class="url-dot"></span>
+            <input id="urlInput" class="url" spellcheck="false" placeholder="输入网址后回车，例如 https://mooc1.chaoxing.com/…" />
+          </div>
+          <button id="goBtn" class="go">前往</button>
+          <button id="quickBtn" class="ghost quick">学习通</button>
+          <div class="loadbar" id="loadBar"></div>
+        </div>
+        <div class="stage-body"></div>
+      </main>
+    </div>
+    <script src="index.js"></script>
+  </body>
+</html>
